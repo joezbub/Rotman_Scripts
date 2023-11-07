@@ -4,40 +4,85 @@ import os
 import importlib
 import numpy as np
 from position import PositionTracker
+import matplotlib.pyplot as plt
+
+class Algo:
+    def __init__(self, name, algo, position, state = {}):
+        self.name = name
+        self.algo = algo
+        self.position = position
+        self.state = state
 
 algos_path = 'algos/'
 sys.path.insert(1, algos_path)
 args = sys.argv
-names = []
+
 algos = []
-states = []
-positions = []
 for i in range(2, len(args)):
     if os.path.exists(algos_path + args[i] + ".py"):
-        names.append(args[i])
-        algos.append(importlib.import_module(args[i]))
-        states.append({})
-        positions.append(PositionTracker())
+        algos.append(Algo(args[i], importlib.import_module(args[i]), PositionTracker()))
 
 df = pd.read_parquet(sys.argv[1] + 'clean.parquet')
 
-dates = df[["datadate"]].to_numpy().flatten()
-tickers = df[["tic"]].to_numpy().flatten()
-prices = df[["adjpc"]].to_numpy().flatten()
+def run_backtest(algos, df):
+    dates = df[["datadate"]].to_numpy().flatten()
+    tickers = df[["tic"]].to_numpy().flatten()
+    prices = df[["adjpc"]].to_numpy().flatten()
 
-num_dates = len(np.unique(dates))
-pnls = np.empty((num_dates,len(algos)), np.float64)
-unqiue_date_ct = 0
+    num_dates = len(np.unique(dates))
+    pnls = np.empty((num_dates,len(algos)), np.float64)
+    unqiue_date_ct = 0
 
-data = {}
-for i, date in np.ndenumerate(dates):
-    if (i[0] > 0 and date != dates[i[0] - 1]) or i[0] == len(dates) - 1:
+    data = {}
+    last_prices = {}
+
+    def feed_data(date):
+        nonlocal unqiue_date_ct
+        nonlocal last_prices
+        nonlocal data
+        last_prices = {**last_prices, **data}
         for j, algo in enumerate(algos):
-            ret = algo.on_tick(dates[i[0] - 1], data, states[j])
-            print(names[j], ret)
-            pnls[unqiue_date_ct][j] = positions[j].place_trades(data, ret)
+            ret = algo.algo.on_tick(dates[i[0] - 1], data, algos[j].state)
+            print(date, algos[j].name, ret)
+            pnls[unqiue_date_ct][j] = algos[j].position.place_trades(last_prices, ret)
         unqiue_date_ct += 1
         data = {}
-    data[tickers[i[0]]] = prices[i[0]]
-    
-    
+
+    for i, date in np.ndenumerate(dates):
+        if (i[0] > 0 and date != dates[i[0] - 1]):
+            feed_data(date)
+        data[tickers[i[0]]] = prices[i[0]]
+    feed_data(dates[-1])
+
+    return pnls
+
+pnls = run_backtest(algos, df)
+
+def calculate_sharpes(deltas):
+    return np.mean(deltas, axis=0) / np.std(deltas, axis=0)
+
+def calculate_sortinos(deltas, T=0):
+    def get_sortino(col, T):
+        temp = np.minimum(0, deltas - T)**2
+        temp_expectation = np.mean(temp)
+        downside_dev = np.sqrt(temp_expectation)
+        sortino_ratio = np.mean(deltas - T) / downside_dev
+        return sortino_ratio
+
+deltas = np.diff(pnls, axis=0)
+sharpes = calculate_sharpes(deltas)
+sortinos = calculate_sortinos(deltas)
+# percent_deltas = deltas / pnls[:-1,:]
+# percent_sharpes = np.mean(percent_deltas, axis=0) / np.std(percent_deltas, axis=0)
+print("FINAL PNLS", pnls[-1:, :])
+print(sharpes)
+# print(percent_sharpes)
+for i in range(len(algos)):
+    plt.plot(pnls[:,i], label=algos[i].name)
+plt.legend(loc="upper left")
+plt.show()
+
+for i in range(len(algos)):
+    plt.plot(deltas[:,i], label=algos[i].name)
+plt.legend(loc="upper left")
+plt.show()
