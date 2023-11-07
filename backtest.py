@@ -80,9 +80,11 @@ print(sharpes)
 for i in range(len(algos)):
     plt.plot(pnls[:,i], label=algos[i].name)
 plt.legend(loc="upper left")
+plt.title("PNL")
 plt.show()
 
 for i in range(len(algos)):
     plt.plot(deltas[:,i], label=algos[i].name)
 plt.legend(loc="upper left")
+plt.title("Deltas")
 plt.show()

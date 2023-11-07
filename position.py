@@ -3,7 +3,7 @@ from collections import defaultdict
 class PositionTracker:
     def __init__(self):
         self.cash = 1000000
-        self.positions = defaultdict(int)
+        self.positions = defaultdict(float)
 
     def place_trades(self, data, trades):
         self.cash *= 1.00015
