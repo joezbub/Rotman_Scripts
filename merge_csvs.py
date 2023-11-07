@@ -31,4 +31,4 @@ big_df = pd.concat(df_list, ignore_index=True)
 print(len(big_df.index), 'rows')
 
 # Save the final result to a new CSV file
-big_df.to_parquet('output.parquet')
+big_df.to_parquet('output1.parquet')
