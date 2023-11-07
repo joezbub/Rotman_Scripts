@@ -12,19 +12,9 @@ print(paths)
 df_list = []
 
 for csv in paths:
-    try:
-        # Try reading the file using default UTF-8 encoding
-        df = pd.read_csv(csv)
-        df_list.append(df)
-    except UnicodeDecodeError:
-        try:
-            # If UTF-8 fails, try reading the file using UTF-16 encoding with tab separator
-            df = pd.read_csv(file_path, sep='\t', encoding='utf-16')
-            df_list.append(df)
-        except Exception as e:
-            print(f"Could not read file {csv} because of error: {e}")
-    except Exception as e:
-        print(f"Could not read file {csv} because of error: {e}")
+    # Try reading the file using default UTF-8 encoding
+    df = pd.read_csv(csv)
+    df_list.append(df)
 
 # Concatenate all data into one DataFrame
 big_df = pd.concat(df_list, ignore_index=True)
