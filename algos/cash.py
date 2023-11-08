@@ -1,5 +1,2 @@
-def on_tick(date, data, state):
-    if "A" not in state:
-        state["A"] = 0
-    state["A"] += 1
-    return []
+def on_tick(index, data, state, positions):
+    return {}

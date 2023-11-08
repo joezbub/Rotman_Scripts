@@ -8,8 +8,8 @@ class PositionTracker:
     def place_trades(self, data, trades):
         self.cash *= 1.00015
         for trade in trades:
-            self.positions[trade[0]] += trade[1]
-            self.cash -= data[trade[0]] * trade[1]
+            self.positions[trade] += trades[trade]
+            self.cash -= data[trade] * trades[trade]
         
         holding_value = 0
         for ticker in self.positions:
